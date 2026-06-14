@@ -1,4 +1,4 @@
-"""Binary sensor platform for Powerwall Local (Fleet)."""
+"""Binary sensor platform for Tesla Powerwall Local (Fleet)."""
 
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ def _not_shutdown(data: dict[str, Any]) -> bool | None:
 
 @dataclass(frozen=True, kw_only=True)
 class PowerwallFleetBinarySensorDescription(BinarySensorEntityDescription):
-    """Describes a Powerwall Local (Fleet) binary sensor."""
+    """Describes a Tesla Powerwall Local (Fleet) binary sensor."""
 
     coordinator_attr: str
     value_fn: Callable[[Any], bool | None]
@@ -123,7 +123,7 @@ async def async_setup_entry(
     entry: PowerwallFleetConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Powerwall Local (Fleet) binary sensors."""
+    """Set up Tesla Powerwall Local (Fleet) binary sensors."""
     runtime = entry.runtime_data
     async_add_entities(
         PowerwallFleetBinarySensor(runtime, description)
@@ -134,7 +134,7 @@ async def async_setup_entry(
 class PowerwallFleetBinarySensor(
     CoordinatorEntity[DataUpdateCoordinator[Any]], BinarySensorEntity
 ):
-    """A Powerwall Local (Fleet) binary sensor bound to a coordinator."""
+    """A Tesla Powerwall Local (Fleet) binary sensor bound to a coordinator."""
 
     _attr_has_entity_name = True
     entity_description: PowerwallFleetBinarySensorDescription

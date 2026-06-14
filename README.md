@@ -1,4 +1,4 @@
-# Powerwall Local (Fleet) — `hass-powerwall-fleet`
+# Tesla Powerwall Local (Fleet) — `hass-powerwall-fleet`
 
 Works alongside the **stock Home Assistant [Tesla Fleet](https://www.home-assistant.io/integrations/tesla_fleet/)
 integration** — no changes to Tesla Fleet are required — to surface **local
@@ -32,8 +32,8 @@ register a signed local-access key.
 
 1. In HACS, open **Integrations** → menu → **Custom repositories**.
 2. Add this repository's URL with category **Integration**.
-3. Install **Powerwall Local (Fleet)** and restart Home Assistant.
-4. **Settings → Devices & Services → Add Integration → Powerwall Local (Fleet)**,
+3. Install **Tesla Powerwall Local (Fleet)** and restart Home Assistant.
+4. **Settings → Devices & Services → Add Integration → Tesla Powerwall Local (Fleet)**,
    select the Tesla Fleet entry and energy site, then complete local gateway pairing.
 
 ## Manual installation

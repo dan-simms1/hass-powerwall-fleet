@@ -1,4 +1,4 @@
-"""Number platform for Powerwall Local (Fleet)."""
+"""Number platform for Tesla Powerwall Local (Fleet)."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ async def async_setup_entry(
     entry: PowerwallFleetConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Powerwall Local (Fleet) number entities."""
+    """Set up Tesla Powerwall Local (Fleet) number entities."""
     runtime = entry.runtime_data
     async_add_entities([BackupReserveNumber(runtime)])
 

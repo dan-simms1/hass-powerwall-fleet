@@ -1,4 +1,4 @@
-"""Sensor platform for Powerwall Local (Fleet).
+"""Sensor platform for Tesla Powerwall Local (Fleet).
 
 Entities are split across five coordinators (status, meters, battery SoC,
 grid status, config) — each polled on its own cadence. The
@@ -71,7 +71,7 @@ def _path(data: Any, *keys: Any) -> Any:
 
 @dataclass(frozen=True, kw_only=True)
 class PowerwallFleetSensorDescription(SensorEntityDescription):
-    """Describes a Powerwall Local (Fleet) sensor + the coordinator it reads from."""
+    """Describes a Tesla Powerwall Local (Fleet) sensor + the coordinator it reads from."""
 
     coordinator_attr: str
     value_fn: Callable[[Any], StateType]
@@ -1056,7 +1056,7 @@ async def async_setup_entry(
     entry: PowerwallFleetConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Powerwall Local (Fleet) sensors."""
+    """Set up Tesla Powerwall Local (Fleet) sensors."""
     runtime = entry.runtime_data
     entities: list[CoordinatorEntity[DataUpdateCoordinator[Any]]] = [
         PowerwallFleetSensor(runtime, description) for description in _SITE_SENSORS
@@ -1074,7 +1074,7 @@ async def async_setup_entry(
 
 
 class PowerwallFleetSensor(CoordinatorEntity[DataUpdateCoordinator[Any]], SensorEntity):
-    """A Powerwall Local (Fleet) sensor bound to one of the per-endpoint coordinators."""
+    """A Tesla Powerwall Local (Fleet) sensor bound to one of the per-endpoint coordinators."""
 
     _attr_has_entity_name = True
     entity_description: PowerwallFleetSensorDescription

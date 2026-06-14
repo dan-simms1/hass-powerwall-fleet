@@ -1,4 +1,4 @@
-"""Constants for the Powerwall Local (Fleet) integration."""
+"""Constants for the Tesla Powerwall Local (Fleet) integration."""
 
 from __future__ import annotations
 

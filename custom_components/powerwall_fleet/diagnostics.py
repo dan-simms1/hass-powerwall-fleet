@@ -1,4 +1,4 @@
-"""Diagnostics support for Powerwall Local (Fleet)."""
+"""Diagnostics support for Tesla Powerwall Local (Fleet)."""
 
 from __future__ import annotations
 

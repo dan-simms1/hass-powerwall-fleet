@@ -1,4 +1,4 @@
-"""DataUpdateCoordinators for the Powerwall Local (Fleet) integration.
+"""DataUpdateCoordinators for the Tesla Powerwall Local (Fleet) integration.
 
 Each gateway endpoint gets its own coordinator so it can be polled at its
 own cadence — `get_status` and `get_meters_aggregates` are fast, the

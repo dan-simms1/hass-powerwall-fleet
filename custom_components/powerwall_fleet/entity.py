@@ -1,4 +1,4 @@
-"""Shared entity base for Powerwall Local (Fleet) control platforms."""
+"""Shared entity base for Tesla Powerwall Local (Fleet) control platforms."""
 
 from __future__ import annotations
 

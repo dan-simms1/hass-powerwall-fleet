@@ -1,4 +1,4 @@
-"""Select platform for Powerwall Local (Fleet)."""
+"""Select platform for Tesla Powerwall Local (Fleet)."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ async def async_setup_entry(
     entry: PowerwallFleetConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Powerwall Local (Fleet) select entities."""
+    """Set up Tesla Powerwall Local (Fleet) select entities."""
     runtime = entry.runtime_data
     async_add_entities(
         [

@@ -1,4 +1,4 @@
-"""The Powerwall Local (Fleet) integration."""
+"""The Tesla Powerwall Local (Fleet) integration."""
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ PLATFORMS: list[Platform] = [
 async def async_setup_entry(
     hass: HomeAssistant, entry: PowerwallFleetConfigEntry
 ) -> bool:
-    """Set up Powerwall Local (Fleet) from a config entry."""
+    """Set up Tesla Powerwall Local (Fleet) from a config entry."""
     key_path = Path(hass.config.path(KEY_FILENAME))
     try:
         key_pem = await hass.async_add_executor_job(key_path.read_bytes)

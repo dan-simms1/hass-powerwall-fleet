@@ -1,4 +1,4 @@
-hass-powerwall-fleet (Powerwall Local (Fleet))
+hass-powerwall-fleet (Tesla Powerwall Local (Fleet))
 
 This product is a derivative work of:
 
@@ -11,7 +11,7 @@ Modifications in this fork:
     - Re-pointed the config flow / setup bootstrap from the Home Assistant
       "teslemetry" integration to the official "tesla_fleet" integration.
     - Renamed the integration domain to "powerwall_fleet" and the display
-      name to "Powerwall Local (Fleet)".
+      name to "Tesla Powerwall Local (Fleet)".
 
 Bundled/required third-party libraries retain their own licenses:
     - aiopowerwall            (https://github.com/Teslemetry/aiopowerwall)

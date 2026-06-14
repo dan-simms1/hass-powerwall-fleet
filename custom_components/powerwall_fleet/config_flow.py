@@ -1,4 +1,4 @@
-"""Config flow for Powerwall Local (Fleet).
+"""Config flow for Tesla Powerwall Local (Fleet).
 
 Consumes the core `tesla_fleet` integration's runtime data rather than running
 its own OAuth flow — the user picks one of their existing Tesla Fleet entries
@@ -121,7 +121,7 @@ def _is_verified(client: Mapping[str, Any] | None) -> bool:
 
 
 class PowerwallFleetConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Config flow for Powerwall Local (Fleet), backed by a Tesla Fleet entry."""
+    """Config flow for Tesla Powerwall Local (Fleet), backed by a Tesla Fleet entry."""
 
     VERSION = 1
 
@@ -232,7 +232,7 @@ class PowerwallFleetConfigFlow(ConfigFlow, domain=DOMAIN):
         try:
             await self._site["api"].add_authorized_client(
                 self._public_key_der,
-                description="Powerwall Local (Fleet)",
+                description="Tesla Powerwall Local (Fleet)",
                 key_type=AuthorizedClientKeyType.RSA,
                 authorized_client_type=AuthorizedClientType.CUSTOMER_MOBILE_APP,
             )
