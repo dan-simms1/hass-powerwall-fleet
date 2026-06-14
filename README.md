@@ -25,8 +25,10 @@ register a signed local-access key.
 - Home Assistant 2026.4 or newer
 - The **Tesla Fleet** integration installed and loaded, with at least one energy site
 - Network reachability from Home Assistant to the Powerwall gateway
-- The WiFi hotspot password from the sticker behind the Powerwall's glass cover
-  (only the last 5 characters are used)
+- The Powerwall's IP address, and its password — printed **inside the Powerwall
+  unit** (behind the front cover) or available from Tesla support (only the last
+  5 characters are used)
+- Physical access to the Powerwall unit during setup (to flip its disconnect switch)
 
 ## Installation (HACS)
 
@@ -46,12 +48,19 @@ Copy `custom_components/powerwall_fleet/` into your Home Assistant
 1. The flow reads your energy sites from the loaded **Tesla Fleet** config entry
    and discovers the gateway's LAN IP via the Fleet `networking_status` endpoint.
 2. It generates a local RSA key (stored as `powerwall_fleet.key` in your HA config
-   dir) and registers the public key as an *authorized client* on the gateway via
-   the Fleet `add_authorized_client` endpoint.
-3. You toggle the disconnect switch on the Powerwall to verify the key, then enter
-   the gateway host/IP and WiFi password to confirm the local connection.
+   dir) and registers the public key as an *authorized client* via the Fleet
+   `add_authorized_client` endpoint.
+3. **Confirm at the Powerwall (physically).** You must be standing at the
+   **Powerwall 3 unit itself — _not_ the Backup Gateway**. On the **left-hand side**
+   of the unit, flip the disconnect switch **off, then back on**, and click
+   **Submit**. This proves physical access and authorises the key. *(On a Powerwall 2
+   the switch is on the right-hand side.)* If it reports the key isn't confirmed yet,
+   flip the switch off/on again and resubmit.
+4. **Enter the connection details.** Type the Powerwall's **IP address** and
+   **password**. The password is printed **inside the Powerwall unit** (behind the
+   front cover) — or obtain it from Tesla support. Only the last 5 characters are used.
 
-After that, every poll is a signed call to the gateway over your LAN.
+After that, every poll is a signed call to the gateway over your LAN — no cloud.
 
 ## How it works at runtime
 

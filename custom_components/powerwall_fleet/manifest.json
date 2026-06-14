@@ -9,5 +9,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/dan-simms1/hass-powerwall-fleet/issues",
   "requirements": ["tesla-fleet-api==1.4.7", "aiopowerwall==0.1.1"],
-  "version": "0.6.0"
+  "version": "0.6.1"
 }

@@ -16,20 +16,20 @@
         }
       },
       "credentials": {
-        "title": "Powerwall credentials",
-        "description": "Enter the WiFi hotspot password for **{site_name}** — it is on the sticker behind the Powerwall glass cover. Only the last 5 characters are used.",
+        "title": "Powerwall connection",
+        "description": "Enter the **IP address** and **password** of the Powerwall at **{site_name}**. The password is printed **inside the Powerwall unit** (behind the front cover) — or ask Tesla support. Only the last 5 characters are used.",
         "data": {
-          "gateway_host": "Powerwall host or IP",
-          "gateway_password": "WiFi password"
+          "gateway_host": "Powerwall IP address",
+          "gateway_password": "Powerwall password"
         }
       },
       "pair": {
-        "title": "Pair Powerwall key",
-        "description": "A pairing key has been sent to **{site_name}**. Toggle the disconnect switch on the left side of the Powerwall 3 or right side of the Powerwall 2, then continue."
+        "title": "Confirm at the Powerwall",
+        "description": "Stand at the **Powerwall 3 unit itself** — not the Backup Gateway. On the **left-hand side** of the unit, flip the disconnect switch **off, then back on**, then click **Submit** to authorise the pairing key for **{site_name}**. (On a Powerwall 2 the switch is on the right-hand side.)"
       }
     },
     "error": {
-      "pair_pending": "The gateway hasn't confirmed the key yet. Toggle the disconnect switch and try again.",
+      "pair_pending": "The Powerwall hasn't confirmed the key yet. At the unit, flip the left-hand disconnect switch off and back on, then click Submit again.",
       "invalid_password": "The gateway rejected that password.",
       "cannot_connect_local": "Could not reach the gateway at that host.",
       "host_required": "Enter the gateway host or IP.",
