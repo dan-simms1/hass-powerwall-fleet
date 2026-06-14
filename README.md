@@ -63,6 +63,17 @@ all sharing a single authenticated local `PowerwallClient` (no cloud calls):
 - **battery SoE**, **grid status**, **config**, **backup events**
 - **components** — TEDAPI component signals (BMS, PCH, **PV strings**, aggregator)
 
+## Coexisting with the Tesla Fleet integration
+
+This integration is designed to run **alongside** the cloud Tesla Fleet integration,
+which models the same energy site. To avoid entity_id collisions (both would
+otherwise want `sensor.<site>_battery_power` etc.), every site-level entity here is
+namespaced with `local_` — e.g. `select.<site>_local_operation_mode`,
+`sensor.<site>_local_battery_power`. Per-Powerwall sensors (PV strings, BMS, PCH)
+live under their own `Powerwall` / `Powerwall expansion N` devices and are already
+distinct. The device still displays under the site name, so the local copy sits next
+to the cloud one in the UI.
+
 ## Entities
 
 The integration creates one device per energy site, plus per-Powerwall and
