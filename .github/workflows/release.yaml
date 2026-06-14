@@ -1,0 +1,33 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set version in manifest
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          manifest="custom_components/powerwall_fleet/manifest.json"
+          tmp="$(mktemp)"
+          jq --arg v "$version" '.version = $v' "$manifest" > "$tmp"
+          mv "$tmp" "$manifest"
+
+      - name: Create zip
+        working-directory: custom_components/powerwall_fleet
+        run: zip -r powerwall_fleet.zip ./*
+
+      - name: Upload zip to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: custom_components/powerwall_fleet/powerwall_fleet.zip
