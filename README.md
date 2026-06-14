@@ -66,8 +66,10 @@ all sharing a single authenticated local `PowerwallClient` (no cloud calls):
 ## Entities
 
 The integration creates one device per energy site, plus per-Powerwall and
-per-expansion battery devices. This fork enables **all** sensors by default (upstream
-disabled many of the diagnostic ones); disable any you don't want on the device page.
+per-expansion battery devices. This fork enables almost all sensors by default
+(upstream disabled many useful ones, including the PV strings). The only group left
+off by default is the redundant per-CT **SYNC-meter** diagnostics (24 entities) — turn
+those on from the device page if you want them; disable anything you don't.
 
 ### PV strings (the headline feature)
 Per string A–F: **voltage**, **current**, **state**, plus a **PV power** sum.
