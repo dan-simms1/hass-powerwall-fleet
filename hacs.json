@@ -1,7 +1,5 @@
 {
   "name": "Powerwall Local (Fleet)",
   "render_readme": true,
-  "homeassistant": "2026.4.0",
-  "zip_release": true,
-  "filename": "powerwall_fleet.zip"
+  "homeassistant": "2024.4.0"
 }
