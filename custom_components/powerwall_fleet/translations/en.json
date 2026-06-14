@@ -17,7 +17,7 @@
       },
       "credentials": {
         "title": "Powerwall connection",
-        "description": "Enter the **IP address** and **password** of the Powerwall at **{site_name}**. The password is printed **inside the Powerwall unit** (behind the front cover) — or ask Tesla support. Only the last 5 characters are used.",
+        "description": "Enter the **IP address** and **password** of the Powerwall at **{site_name}**. The password is printed **inside the Powerwall unit** (behind the front cover) — or ask Tesla support. Type it **exactly as printed**; only its last 5 characters are used (and stored).",
         "data": {
           "gateway_host": "Powerwall IP address",
           "gateway_password": "Powerwall password"

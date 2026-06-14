@@ -58,7 +58,8 @@ Copy `custom_components/powerwall_fleet/` into your Home Assistant
    flip the switch off/on again and resubmit.
 4. **Enter the connection details.** Type the Powerwall's **IP address** and
    **password**. The password is printed **inside the Powerwall unit** (behind the
-   front cover) — or obtain it from Tesla support. Only the last 5 characters are used.
+   front cover) — or obtain it from Tesla support. Enter it **exactly as printed**;
+   only its last 5 characters are used (and only those 5 are stored).
 
 After that, every poll is a signed call to the gateway over your LAN — no cloud.
 
