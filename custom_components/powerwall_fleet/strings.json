@@ -186,8 +186,33 @@
       "hvp_part_number": { "name": "HVP part number" },
       "hvp_serial_number": { "name": "HVP serial number" }
     },
+    "number": {
+      "backup_reserve_percent": { "name": "Backup reserve" }
+    },
+    "select": {
+      "operation_mode": {
+        "name": "Operation mode",
+        "state": {
+          "self_consumption": "Self-powered",
+          "autonomous": "Time-based control",
+          "backup": "Backup"
+        }
+      },
+      "export_rule": {
+        "name": "Export rule",
+        "state": {
+          "battery_ok": "Battery OK",
+          "pv_only": "PV only",
+          "never": "Never"
+        }
+      }
+    },
     "switch": {
-      "grid_connected": { "name": "Grid connected" }
+      "grid_connected": { "name": "Grid connected" },
+      "allow_grid_charging": { "name": "Allow grid charging" },
+      "storm_mode": { "name": "Storm watch" },
+      "grid_services": { "name": "Grid services" },
+      "manual_backup": { "name": "Manual backup" }
     }
   }
 }
