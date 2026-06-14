@@ -65,14 +65,16 @@ all sharing a single authenticated local `PowerwallClient` (no cloud calls):
 
 ## Coexisting with the Tesla Fleet integration
 
-This integration is designed to run **alongside** the cloud Tesla Fleet integration,
-which models the same energy site. To avoid entity_id collisions (both would
-otherwise want `sensor.<site>_battery_power` etc.), every site-level entity here is
-namespaced with `local_` — e.g. `select.<site>_local_operation_mode`,
-`sensor.<site>_local_battery_power`. Per-Powerwall sensors (PV strings, BMS, PCH)
-live under their own `Powerwall` / `Powerwall expansion N` devices and are already
-distinct. The device still displays under the site name, so the local copy sits next
-to the cloud one in the UI.
+This integration runs **alongside** the cloud Tesla Fleet integration, which models
+the same energy site. To avoid entity_id collisions (both would otherwise want
+`sensor.<site>_battery_power` etc.), every device here carries a **"Local"** suffix —
+`<Site> Local`, `Powerwall Local`, `Powerwall expansion N Local`. Home Assistant's
+normal entity_id generation therefore always includes `local`, e.g.
+`select.<site>_local_operation_mode`, `sensor.<site>_local_battery_power`,
+`sensor.powerwall_local_pv_string_a_voltage` (plus whatever area/room prefix HA
+adds). Entity_ids aren't forced — HA names them naturally — and Tesla Fleet's own
+entities are left untouched, so the local copy sits next to the cloud one with no
+clashes.
 
 ## Entities
 

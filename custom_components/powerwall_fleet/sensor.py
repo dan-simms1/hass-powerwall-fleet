@@ -51,7 +51,7 @@ from .coordinator import (
     PowerwallRuntimeData,
     PowerwallFleetConfigEntry,
 )
-from .entity import local_entity_id
+from .entity import local_device_name
 from .reserve import raw_reserve_to_app_percent
 
 
@@ -1090,19 +1090,14 @@ class PowerwallFleetSensor(CoordinatorEntity[DataUpdateCoordinator[Any]], Sensor
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{runtime.din}_{description.key}"
-        title = coordinator.config_entry.title
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, runtime.din)},
-            name=title,
+            name=local_device_name(coordinator.config_entry.title),
             manufacturer=MANUFACTURER,
             model=MODEL,
             serial_number=runtime.din,
             sw_version=runtime.firmware_version,
         )
-        # Site sensors share the site name with the cloud Tesla Fleet device;
-        # namespace under `<site>_local_` so entity_ids never collide.
-        if eid := local_entity_id("sensor", title, description.key):
-            self.entity_id = eid
 
     @property
     def native_value(self) -> StateType:
@@ -1148,7 +1143,9 @@ class MasterBatterySensor(
         )
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, block.device_din)},
-            name="Powerwall" if block.role == "leader" else "Powerwall follower",
+            name=local_device_name(
+                "Powerwall" if block.role == "leader" else "Powerwall follower"
+            ),
             manufacturer=MANUFACTURER,
             model=MODEL_MASTER,
             serial_number=serial,
@@ -1191,7 +1188,7 @@ class ExpansionSensor(CoordinatorEntity[DataUpdateCoordinator[Any]], SensorEntit
         self._attr_unique_id = f"{expansion_din}_{description.key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, expansion_din)},
-            name=f"Powerwall expansion {description.display_index}",
+            name=local_device_name(f"Powerwall expansion {description.display_index}"),
             manufacturer=MANUFACTURER,
             model=MODEL_EXPANSION,
             serial_number=serial,

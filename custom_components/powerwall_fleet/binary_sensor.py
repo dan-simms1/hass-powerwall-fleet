@@ -22,7 +22,7 @@ from homeassistant.helpers.update_coordinator import (
 
 from .const import DOMAIN, MANUFACTURER, MODEL
 from .coordinator import PowerwallRuntimeData, PowerwallFleetConfigEntry
-from .entity import local_entity_id
+from .entity import local_device_name
 
 
 def _path(data: Any, *keys: str) -> Any:
@@ -150,18 +150,14 @@ class PowerwallFleetBinarySensor(
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{runtime.din}_{description.key}"
-        title = coordinator.config_entry.title
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, runtime.din)},
-            name=title,
+            name=local_device_name(coordinator.config_entry.title),
             manufacturer=MANUFACTURER,
             model=MODEL,
             serial_number=runtime.din,
             sw_version=runtime.firmware_version,
         )
-        # Namespace under `<site>_local_` so we never collide with Tesla Fleet.
-        if eid := local_entity_id("binary_sensor", title, description.key):
-            self.entity_id = eid
 
     @property
     def is_on(self) -> bool | None:

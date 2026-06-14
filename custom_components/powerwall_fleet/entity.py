@@ -5,34 +5,28 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from homeassistant.components.number import NumberEntityDescription
-from homeassistant.components.select import SelectEntityDescription
-from homeassistant.components.switch import SwitchEntityDescription
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
-from homeassistant.util import slugify
 
 from .const import DOMAIN, MANUFACTURER, MODEL
 from .coordinator import PowerwallRuntimeData
 
-# Site-device control entities share the "Volt Vader"-style site name with the
-# cloud Tesla Fleet integration, so their auto-generated entity_ids collide.
-# Map each control description back to its platform domain so we can force a
-# `<site>_local_<key>` entity_id that never clashes with Tesla Fleet's.
-_LOCAL_CONTROL_DOMAINS: tuple[tuple[type, str], ...] = (
-    (NumberEntityDescription, "number"),
-    (SelectEntityDescription, "select"),
-    (SwitchEntityDescription, "switch"),
-)
+# Append " Local" to every device name. The cloud Tesla Fleet integration models
+# the same site/Powerwall, so without this our entity_ids would collide with its
+# (e.g. both want `sensor.<site>_battery_power`). Putting "Local" in the device
+# name means Home Assistant's normal entity_id generation always produces a
+# `..._local_...` id — keeping the area/room prefix HA adds, and never clashing
+# with Tesla Fleet, with no need to force entity_ids by hand.
+LOCAL_SUFFIX = "Local"
 
 
-def local_entity_id(domain: str, title: str | None, key: str) -> str | None:
-    """Build a Tesla-Fleet-safe `<domain>.<site>_local_<key>` entity_id."""
-    return f"{domain}.{slugify(title)}_local_{key}" if title else None
+def local_device_name(base: str | None) -> str | None:
+    """Return ``"<base> Local"`` (or None) for a Tesla-Fleet-safe device name."""
+    return f"{base} {LOCAL_SUFFIX}" if base else None
 
 
 def config_path(data: Any, *keys: str) -> Any:
@@ -62,15 +56,9 @@ class PowerwallFleetEntity(CoordinatorEntity[DataUpdateCoordinator[Any]]):
         title = coordinator.config_entry.title if coordinator.config_entry else None
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, runtime.din)},
-            name=title,
+            name=local_device_name(title),
             manufacturer=MANUFACTURER,
             model=MODEL,
             serial_number=runtime.din,
             sw_version=runtime.firmware_version,
         )
-        domain = next(
-            (d for cls, d in _LOCAL_CONTROL_DOMAINS if isinstance(description, cls)),
-            None,
-        )
-        if domain and (eid := local_entity_id(domain, title, description.key)):
-            self.entity_id = eid
