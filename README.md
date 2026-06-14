@@ -66,14 +66,14 @@ all sharing a single authenticated local `PowerwallClient` (no cloud calls):
 ## Entities
 
 The integration creates one device per energy site, plus per-Powerwall and
-per-expansion battery devices. Many entities are disabled by default — enable them
-on the device page if you want the extra detail.
+per-expansion battery devices. This fork enables **all** sensors by default (upstream
+disabled many of the diagnostic ones); disable any you don't want on the device page.
 
 ### PV strings (the headline feature)
 Per string A–F: **voltage**, **current**, **state**, plus a **PV power** sum.
 
 ### Power flows
-- Battery / Site / Load / Solar power (Solar RGM, Generator, Conductor disabled by default)
+- Battery / Site / Load / Solar power, plus Solar RGM, Generator, Conductor
 
 ### Battery
 - State of energy, percentage charged, energy remaining, full pack energy
