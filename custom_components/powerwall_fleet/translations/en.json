@@ -193,7 +193,7 @@
       "operation_mode": {
         "name": "Operation mode",
         "state": {
-          "self_consumption": "Self-powered",
+          "self_consumption": "Self-consumption",
           "autonomous": "Time-based control",
           "backup": "Backup"
         }
@@ -201,8 +201,8 @@
       "export_rule": {
         "name": "Export rule",
         "state": {
-          "battery_ok": "Battery OK",
-          "pv_only": "PV only",
+          "battery_ok": "Solar and battery",
+          "pv_only": "Solar only",
           "never": "Never"
         }
       }
