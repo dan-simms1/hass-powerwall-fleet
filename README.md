@@ -73,6 +73,17 @@ all sharing a single authenticated local `PowerwallClient` (no cloud calls):
 - **battery SoE**, **grid status**, **config**, **backup events**
 - **components** — TEDAPI component signals (BMS, PCH, **PV strings**, aggregator)
 
+## Maintenance & options
+
+- **Re-authentication** — if the gateway ever rejects the stored key/password (after a
+  firmware update, key revocation, or password change), Home Assistant prompts you to
+  re-pair (re-register the key + toggle the unit switch) without losing your history.
+- **Reconfigure** — change the Powerwall's **IP address or password** in place (e.g.
+  after a DHCP change) via the integration's *Reconfigure* option; no need to delete it.
+- **Polling profile** (integration *Configure* / options) — **Fast** halves every poll
+  interval (fresher data, more LAN traffic), **Relaxed** doubles them; **Normal** is the
+  default.
+
 ## Coexisting with the Tesla Fleet integration
 
 This integration runs **alongside** the cloud Tesla Fleet integration, which models
@@ -95,7 +106,13 @@ off by default is the redundant per-CT **SYNC-meter** diagnostics (24 entities) 
 those on from the device page if you want them; disable anything you don't.
 
 ### PV strings (the headline feature)
-Per string A–F: **voltage**, **current**, **state**, plus a **PV power** sum.
+Per string A–F: **voltage**, **current**, **power** (derived V × I), **state**, plus a
+total **PV power** sum.
+
+### Backup & gateway
+- **Backup time remaining** (estimated runtime at the current load)
+- **Gateway time** (diagnostic)
+- The device page links to the Powerwall's local web UI (`configuration_url`)
 
 ### Power flows
 - Battery / Site / Load / Solar power, plus Solar RGM, Generator, Conductor

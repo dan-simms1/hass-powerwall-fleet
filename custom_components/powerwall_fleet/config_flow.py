@@ -17,10 +17,15 @@ import voluptuous as vol
 from homeassistant.components.tesla_fleet import TeslaFleetConfigEntry
 from homeassistant.components.tesla_fleet.models import TeslaFleetEnergyData
 from homeassistant.config_entries import (
+    SOURCE_REAUTH,
+    SOURCE_RECONFIGURE,
+    ConfigEntry,
     ConfigEntryState,
     ConfigFlow,
     ConfigFlowResult,
+    OptionsFlow,
 )
+from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from tesla_fleet_api.const import (
     AuthorizedClientKeyType,
@@ -35,11 +40,14 @@ from .const import (
     CONF_GATEWAY_HOST,
     CONF_GATEWAY_PASSWORD,
     CONF_PARENT_ENTRY_ID,
+    CONF_SCAN_PROFILE,
+    DEFAULT_SCAN_PROFILE,
     DOMAIN,
     KEY_FILENAME,
     KEY_PAIRING_POLL_ATTEMPTS,
     KEY_PAIRING_POLL_INTERVAL,
     LOGGER,
+    SCAN_PROFILE_MULTIPLIERS,
 )
 
 
@@ -353,6 +361,23 @@ class PowerwallFleetConfigFlow(ConfigFlow, domain=DOMAIN):
                         session=session,
                     ) as client:
                         await client.connect()
+                    # Reauth / reconfigure update the existing entry in place.
+                    if self.source == SOURCE_REAUTH:
+                        return self.async_update_reload_and_abort(
+                            self._get_reauth_entry(),
+                            data_updates={
+                                CONF_GATEWAY_HOST: host,
+                                CONF_GATEWAY_PASSWORD: password,
+                            },
+                        )
+                    if self.source == SOURCE_RECONFIGURE:
+                        return self.async_update_reload_and_abort(
+                            self._get_reconfigure_entry(),
+                            data_updates={
+                                CONF_GATEWAY_HOST: host,
+                                CONF_GATEWAY_PASSWORD: password,
+                            },
+                        )
                     assert self._parent_entry is not None
                     return self.async_create_entry(
                         title=site["site_name"],
@@ -388,4 +413,106 @@ class PowerwallFleetConfigFlow(ConfigFlow, domain=DOMAIN):
             ),
             errors=errors,
             description_placeholders={"site_name": site["site_name"]},
+        )
+
+    # ----- reauth (re-pair / re-confirm when local auth fails) -------------------
+
+    async def async_step_reauth(
+        self, entry_data: Mapping[str, Any]
+    ) -> ConfigFlowResult:
+        """Entered when the gateway rejects the stored RSA key or password."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        entry = self._get_reauth_entry()
+        parent = self.hass.config_entries.async_get_entry(
+            entry.data.get(CONF_PARENT_ENTRY_ID, "")
+        )
+        if parent is None or parent.state is not ConfigEntryState.LOADED:
+            return self.async_abort(reason="tesla_fleet_not_loaded")
+        self._parent_entry = parent
+
+        site_id = entry.data.get(CONF_ENERGY_SITE_ID)
+        site = next(
+            (s for s in parent.runtime_data.energysites if s.id == site_id), None
+        )
+        if site is None:
+            return self.async_abort(reason="no_sites")
+
+        self._site = await self._site_meta(site)
+        self._site["host"] = entry.data.get(CONF_GATEWAY_HOST) or self._site["host"]
+        self._site["password"] = entry.data.get(CONF_GATEWAY_PASSWORD, "")
+        if (aborted := await self._ensure_key_loaded()) is not None:
+            return aborted
+
+        try:
+            response = await site.api.list_authorized_clients()
+        except TeslaFleetError:
+            response = None
+        if _is_verified(_find_client_for_key(response, self._public_key_b64)):
+            # Key still trusted — only the host/password needs re-confirming.
+            return await self.async_step_credentials()
+
+        try:
+            await site.api.add_authorized_client(
+                self._public_key_der,
+                description="Tesla Powerwall Local (Fleet)",
+                key_type=AuthorizedClientKeyType.RSA,
+                authorized_client_type=AuthorizedClientType.CUSTOMER_MOBILE_APP,
+            )
+        except TeslaFleetError as err:
+            LOGGER.error("reauth add_authorized_client failed: %s", err)
+            return self.async_abort(reason="pair_install_failed")
+        return await self.async_step_pair()
+
+    # ----- reconfigure (change gateway IP / password, no re-pairing) -------------
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Update the gateway IP / password in place (e.g. after a DHCP change)."""
+        entry = self._get_reconfigure_entry()
+        self._site = {
+            "site_id": entry.data.get(CONF_ENERGY_SITE_ID),
+            "site_name": entry.data.get("site_name", entry.title),
+            "host": entry.data.get(CONF_GATEWAY_HOST, ""),
+            "password": entry.data.get(CONF_GATEWAY_PASSWORD, ""),
+            "api": None,
+        }
+        if (aborted := await self._ensure_key_loaded()) is not None:
+            return aborted
+        return await self.async_step_credentials()
+
+    # ----- options ---------------------------------------------------------------
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: ConfigEntry,
+    ) -> PowerwallFleetOptionsFlow:
+        return PowerwallFleetOptionsFlow()
+
+
+class PowerwallFleetOptionsFlow(OptionsFlow):
+    """Options: a polling profile that scales every coordinator interval."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            return self.async_create_entry(data=user_input)
+        current = self.config_entry.options.get(
+            CONF_SCAN_PROFILE, DEFAULT_SCAN_PROFILE
+        )
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_SCAN_PROFILE, default=current): vol.In(
+                        list(SCAN_PROFILE_MULTIPLIERS)
+                    )
+                }
+            ),
         )

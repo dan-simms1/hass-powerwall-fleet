@@ -28,14 +28,18 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
+    CONF_SCAN_PROFILE,
+    DEFAULT_SCAN_PROFILE,
     DOMAIN,
     LOGGER,
+    MIN_SCAN_SECONDS,
     SCAN_BACKUP_EVENTS_SECONDS,
     SCAN_BATTERY_SOE_SECONDS,
     SCAN_COMPONENTS_SECONDS,
     SCAN_CONFIG_SECONDS,
     SCAN_GRID_STATUS_SECONDS,
     SCAN_METERS_SECONDS,
+    SCAN_PROFILE_MULTIPLIERS,
     SCAN_STATUS_SECONDS,
 )
 
@@ -97,11 +101,15 @@ class _BasePowerwallCoordinator[T](DataUpdateCoordinator[T]):
         client: PowerwallClient,
         interval_seconds: int,
     ) -> None:
+        multiplier = SCAN_PROFILE_MULTIPLIERS.get(
+            entry.options.get(CONF_SCAN_PROFILE, DEFAULT_SCAN_PROFILE), 1.0
+        )
+        interval = max(MIN_SCAN_SECONDS, round(interval_seconds * multiplier))
         super().__init__(
             hass,
             LOGGER,
             name=f"{DOMAIN}_{self._label}_{entry.entry_id}",
-            update_interval=timedelta(seconds=interval_seconds),
+            update_interval=timedelta(seconds=interval),
             config_entry=entry,
         )
         self.client = client

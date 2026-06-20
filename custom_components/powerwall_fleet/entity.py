@@ -12,8 +12,8 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
 )
 
-from .const import DOMAIN, MANUFACTURER, MODEL
-from .coordinator import PowerwallRuntimeData
+from .const import CONF_GATEWAY_HOST, DOMAIN, MANUFACTURER, MODEL
+from .coordinator import PowerwallFleetConfigEntry, PowerwallRuntimeData
 
 # Append " Local" to every device name. The cloud Tesla Fleet integration models
 # the same site/Powerwall, so without this our entity_ids would collide with its
@@ -27,6 +27,12 @@ LOCAL_SUFFIX = "Local"
 def local_device_name(base: str | None) -> str | None:
     """Return ``"<base> Local"`` (or None) for a Tesla-Fleet-safe device name."""
     return f"{base} {LOCAL_SUFFIX}" if base else None
+
+
+def gateway_configuration_url(entry: PowerwallFleetConfigEntry | None) -> str | None:
+    """Clickable link to the Powerwall's local web UI, from the gateway host."""
+    host = entry.data.get(CONF_GATEWAY_HOST) if entry else None
+    return f"https://{host}" if host else None
 
 
 def config_path(data: Any, *keys: str) -> Any:
@@ -61,4 +67,5 @@ class PowerwallFleetEntity(CoordinatorEntity[DataUpdateCoordinator[Any]]):
             model=MODEL,
             serial_number=runtime.din,
             sw_version=runtime.firmware_version,
+            configuration_url=gateway_configuration_url(coordinator.config_entry),
         )

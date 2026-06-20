@@ -22,7 +22,7 @@ from homeassistant.helpers.update_coordinator import (
 
 from .const import DOMAIN, MANUFACTURER, MODEL
 from .coordinator import PowerwallRuntimeData, PowerwallFleetConfigEntry
-from .entity import local_device_name
+from .entity import gateway_configuration_url, local_device_name
 
 
 def _path(data: Any, *keys: str) -> Any:
@@ -157,6 +157,7 @@ class PowerwallFleetBinarySensor(
             model=MODEL,
             serial_number=runtime.din,
             sw_version=runtime.firmware_version,
+            configuration_url=gateway_configuration_url(coordinator.config_entry),
         )
 
     @property

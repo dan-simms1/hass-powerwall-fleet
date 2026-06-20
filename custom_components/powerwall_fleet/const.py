@@ -25,6 +25,19 @@ SCAN_CONFIG_SECONDS = 600
 SCAN_BACKUP_EVENTS_SECONDS = 30
 SCAN_COMPONENTS_SECONDS = 30
 
+# Optional polling profile (options flow): scales every coordinator interval.
+CONF_SCAN_PROFILE = "scan_profile"
+SCAN_PROFILE_FAST = "fast"
+SCAN_PROFILE_NORMAL = "normal"
+SCAN_PROFILE_RELAXED = "relaxed"
+DEFAULT_SCAN_PROFILE = SCAN_PROFILE_NORMAL
+SCAN_PROFILE_MULTIPLIERS: dict[str, float] = {
+    SCAN_PROFILE_FAST: 0.5,
+    SCAN_PROFILE_NORMAL: 1.0,
+    SCAN_PROFILE_RELAXED: 2.0,
+}
+MIN_SCAN_SECONDS = 5
+
 MANUFACTURER = "Tesla"
 MODEL = "Powerwall 3 (Fleet local)"
 MODEL_MASTER = "Powerwall 3"

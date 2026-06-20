@@ -27,7 +27,9 @@ from homeassistant.const import (
     UnitOfFrequency,
     UnitOfPower,
     UnitOfReactivePower,
+    UnitOfTime,
 )
+from aiopowerwall import backup_time_remaining
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityCategory
@@ -51,7 +53,7 @@ from .coordinator import (
     PowerwallRuntimeData,
     PowerwallFleetConfigEntry,
 )
-from .entity import local_device_name
+from .entity import gateway_configuration_url, local_device_name
 from .reserve import raw_reserve_to_app_percent
 
 
@@ -302,6 +304,25 @@ def _pch_current(name: str) -> Callable[[dict[str, Any]], StateType]:
     return _fn
 
 
+def _pch_pv_power(letter: str) -> Callable[[dict[str, Any]], StateType]:
+    """Per-string DC power (W) = PCH_PvVoltage{X} × PCH_PvCurrent{X}.
+
+    The gateway exposes voltage and current per string but only an aggregate
+    PV power, so per-string power is derived here.
+    """
+    volt_fn = _component_signal("pch", 0, f"PCH_PvVoltage{letter}")
+    curr_fn = _pch_current(f"PCH_PvCurrent{letter}")
+
+    def _fn(data: dict[str, Any]) -> StateType:
+        volt = volt_fn(data)
+        curr = curr_fn(data)
+        if not isinstance(volt, (int, float)) or not isinstance(curr, (int, float)):
+            return None
+        return round(float(volt) * float(curr), 1)
+
+    return _fn
+
+
 # ── Sensor descriptions, grouped by coordinator ─────────────────────────────
 
 
@@ -435,6 +456,27 @@ _STATUS_SENSORS: tuple[PowerwallFleetSensorDescription, ...] = (
         entity_registry_enabled_default=True,
         coordinator_attr="status",
         value_fn=_status_meter_power("SOLAR_RGM"),
+    ),
+    # Estimated backup runtime at the current load (hours)
+    PowerwallFleetSensorDescription(
+        key="backup_time_remaining",
+        translation_key="backup_time_remaining",
+        device_class=SensorDeviceClass.DURATION,
+        state_class=MEAS,
+        native_unit_of_measurement=UnitOfTime.HOURS,
+        suggested_display_precision=1,
+        coordinator_attr="status",
+        value_fn=backup_time_remaining,
+    ),
+    # Gateway clock (diagnostic timestamp)
+    PowerwallFleetSensorDescription(
+        key="system_time",
+        translation_key="system_time",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=DIAG,
+        entity_registry_enabled_default=True,
+        coordinator_attr="status",
+        value_fn=_system_time,
     ),
     PowerwallFleetSensorDescription(
         key="generator_power",
@@ -859,6 +901,19 @@ _MASTER_COMPONENT_SENSORS: tuple[PowerwallFleetSensorDescription, ...] = (
         )
         for s in _PCH_STRINGS
     ),
+    *(
+        PowerwallFleetSensorDescription(
+            key=f"pch_pv_power_{s}",
+            translation_key=f"pch_pv_power_{s}",
+            device_class=POWER,
+            state_class=MEAS,
+            native_unit_of_measurement=UnitOfPower.WATT,
+            suggested_display_precision=0,
+            coordinator_attr="components",
+            value_fn=_pch_pv_power(s.upper()),
+        )
+        for s in _PCH_STRINGS
+    ),
     # PCH state strings (master only)
     PowerwallFleetSensorDescription(
         key="pch_state",
@@ -1097,6 +1152,7 @@ class PowerwallFleetSensor(CoordinatorEntity[DataUpdateCoordinator[Any]], Sensor
             model=MODEL,
             serial_number=runtime.din,
             sw_version=runtime.firmware_version,
+            configuration_url=gateway_configuration_url(coordinator.config_entry),
         )
 
     @property

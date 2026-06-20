@@ -40,7 +40,20 @@
       "tesla_fleet_not_loaded": "The Tesla Fleet integration must be configured and loaded first.",
       "no_sites": "No energy sites were found on this account.",
       "pair_install_failed": "Failed to install the pairing key on the gateway.",
+      "reauth_successful": "Re-authentication was successful.",
+      "reconfigure_successful": "Connection details updated.",
       "unknown": "An unknown error occurred."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Polling",
+        "description": "How often to poll the Powerwall over your LAN. **Fast** halves the intervals (fresher data, more LAN traffic); **Relaxed** doubles them.",
+        "data": {
+          "scan_profile": "Polling profile"
+        }
+      }
     }
   },
   "entity": {
@@ -59,6 +72,8 @@
       "load_power": { "name": "Load power" },
       "solar_power": { "name": "Solar power" },
       "solar_rgm_power": { "name": "Solar RGM power" },
+      "backup_time_remaining": { "name": "Backup time remaining" },
+      "system_time": { "name": "Gateway time" },
       "generator_power": { "name": "Generator power" },
       "conductor_power": { "name": "Conductor power" },
       "battery_soe": { "name": "Charge" },
@@ -166,6 +181,12 @@
       "pch_pv_current_d": { "name": "PV string D current" },
       "pch_pv_current_e": { "name": "PV string E current" },
       "pch_pv_current_f": { "name": "PV string F current" },
+      "pch_pv_power_a": { "name": "PV string A power" },
+      "pch_pv_power_b": { "name": "PV string B power" },
+      "pch_pv_power_c": { "name": "PV string C power" },
+      "pch_pv_power_d": { "name": "PV string D power" },
+      "pch_pv_power_e": { "name": "PV string E power" },
+      "pch_pv_power_f": { "name": "PV string F power" },
       "pch_state": { "name": "PCH state" },
       "pch_ac_mode": { "name": "AC mode" },
       "pch_dcdc_state_a": { "name": "DC-DC state A" },
