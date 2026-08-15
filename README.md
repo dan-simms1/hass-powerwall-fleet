@@ -83,6 +83,14 @@ all sharing a single authenticated local `PowerwallClient` (no cloud calls):
 - **Polling profile** (integration *Configure* / options) — **Fast** halves every poll
   interval (fresher data, more LAN traffic), **Relaxed** doubles them; **Normal** is the
   default.
+- **State precision** — the gateway reports raw floats (a state of charge comes back as
+  `97.027972027972`), which would make almost every sensor "change" on every poll and
+  flood websocket clients with `state_changed` events — enough to knock a dashboard
+  tablet offline. States are therefore rounded at source to the precision each
+  measurement actually carries: 10 W for power, 0.1 V, 0.01 Hz, 0.01 A, 0.1 % for state
+  of charge, 0.1 h for backup time, and 1 Wh for energy counters (fine enough that
+  long-term statistics and Energy dashboard totals are unaffected). The table lives in
+  `precision.py` if you want to retune it.
 
 ## Coexisting with the Tesla Fleet integration
 

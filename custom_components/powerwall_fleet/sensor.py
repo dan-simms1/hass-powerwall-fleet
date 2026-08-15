@@ -54,6 +54,7 @@ from .coordinator import (
     PowerwallFleetConfigEntry,
 )
 from .entity import gateway_configuration_url, local_device_name
+from .precision import round_state
 from .reserve import raw_reserve_to_app_percent
 
 
@@ -128,7 +129,7 @@ def _percentage_charged(status: dict[str, Any]) -> StateType:
         return None
     if not full:
         return None
-    return round(float(remaining) / float(full) * 100, 2)
+    return float(remaining) / float(full) * 100
 
 
 def _system_time(status: dict[str, Any]) -> StateType:
@@ -286,7 +287,7 @@ def _bms_percentage_charged(slot: int) -> Callable[[dict[str, Any]], StateType]:
             return None
         if not full:
             return None
-        return round(float(remaining) / float(full) * 100, 2)
+        return float(remaining) / float(full) * 100
 
     return _fn
 
@@ -318,7 +319,7 @@ def _pch_pv_power(letter: str) -> Callable[[dict[str, Any]], StateType]:
         curr = curr_fn(data)
         if not isinstance(volt, (int, float)) or not isinstance(curr, (int, float)):
             return None
-        return round(float(volt) * float(curr), 1)
+        return float(volt) * float(curr)
 
     return _fn
 
@@ -1128,7 +1129,24 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class PowerwallFleetSensor(CoordinatorEntity[DataUpdateCoordinator[Any]], SensorEntity):
+class RoundedSensorEntity(SensorEntity):
+    """Sensor base that quantises raw gateway values to a meaningful precision.
+
+    The gateway reports full float precision (a state of charge comes back as
+    ``97.027972027972``), so without this nearly every value differs on every
+    poll and Home Assistant fires a ``state_changed`` event for it. Rounding
+    the *state* is what stops that — ``suggested_display_precision`` is
+    display-only and leaves the state untouched. See :mod:`.precision` for the
+    per-measurement-class table.
+    """
+
+    def _rounded(self, value: StateType) -> StateType:
+        return round_state(value, self.device_class, self.native_unit_of_measurement)
+
+
+class PowerwallFleetSensor(
+    CoordinatorEntity[DataUpdateCoordinator[Any]], RoundedSensorEntity
+):
     """A Tesla Powerwall Local (Fleet) sensor bound to one of the per-endpoint coordinators."""
 
     _attr_has_entity_name = True
@@ -1157,7 +1175,7 @@ class PowerwallFleetSensor(CoordinatorEntity[DataUpdateCoordinator[Any]], Sensor
 
     @property
     def native_value(self) -> StateType:
-        return self.entity_description.value_fn(self.coordinator.data)
+        return self._rounded(self.entity_description.value_fn(self.coordinator.data))
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -1165,7 +1183,7 @@ class PowerwallFleetSensor(CoordinatorEntity[DataUpdateCoordinator[Any]], Sensor
 
 
 class MasterBatterySensor(
-    CoordinatorEntity[DataUpdateCoordinator[Any]], SensorEntity
+    CoordinatorEntity[DataUpdateCoordinator[Any]], RoundedSensorEntity
 ):
     """A sensor for a master Powerwall battery (one per ``MasterBlock``).
 
@@ -1211,14 +1229,16 @@ class MasterBatterySensor(
     @property
     def native_value(self) -> StateType:
         data = _component_slot_view(self.coordinator.data, self._block.component_slot)
-        return self.entity_description.value_fn(data)
+        return self._rounded(self.entity_description.value_fn(data))
 
     @callback
     def _handle_coordinator_update(self) -> None:
         self.async_write_ha_state()
 
 
-class ExpansionSensor(CoordinatorEntity[DataUpdateCoordinator[Any]], SensorEntity):
+class ExpansionSensor(
+    CoordinatorEntity[DataUpdateCoordinator[Any]], RoundedSensorEntity
+):
     """A sensor that belongs to a battery-expansion device on a PW3 stack.
 
     Expansion devices are linked back to their owning master via
@@ -1253,7 +1273,7 @@ class ExpansionSensor(CoordinatorEntity[DataUpdateCoordinator[Any]], SensorEntit
 
     @property
     def native_value(self) -> StateType:
-        return self.entity_description.value_fn(self.coordinator.data)
+        return self._rounded(self.entity_description.value_fn(self.coordinator.data))
 
     @callback
     def _handle_coordinator_update(self) -> None:
