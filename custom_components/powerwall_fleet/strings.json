@@ -49,9 +49,12 @@
     "step": {
       "init": {
         "title": "Polling",
-        "description": "How often to poll the Powerwall over your LAN. **Fast** halves the intervals (fresher data, more LAN traffic); **Relaxed** doubles them.",
+        "description": "How often to poll the Powerwall over your LAN. **Fast** halves the intervals (fresher data, more LAN traffic); **Relaxed** doubles them.\n\nThe three endpoint groups below are off by default because most installs never read them, and together they are the bulk of the gateway's polling load. Turning one on restores its entities exactly as they were.",
         "data": {
-          "scan_profile": "Polling profile"
+          "scan_profile": "Polling profile",
+          "enable_meters": "Meter aggregates (per-location power, current and energy totals)",
+          "enable_components": "Powerwall 3 unit telemetry (per-battery, per-PV-string detail)",
+          "enable_backup_events": "Manual backup events"
         }
       }
     }

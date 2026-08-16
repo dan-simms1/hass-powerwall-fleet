@@ -1114,9 +1114,16 @@ async def async_setup_entry(
 ) -> None:
     """Set up Tesla Powerwall Local (Fleet) sensors."""
     runtime = entry.runtime_data
+    # Optional endpoint groups can be switched off, in which case their
+    # coordinator is None and the entities reading it are not created.
     entities: list[CoordinatorEntity[DataUpdateCoordinator[Any]]] = [
-        PowerwallFleetSensor(runtime, description) for description in _SITE_SENSORS
+        PowerwallFleetSensor(runtime, description)
+        for description in _SITE_SENSORS
+        if getattr(runtime, description.coordinator_attr) is not None
     ]
+    if runtime.components is None:
+        async_add_entities(entities)
+        return
     for block in runtime.master_blocks:
         entities.extend(
             MasterBatterySensor(runtime, block, description)

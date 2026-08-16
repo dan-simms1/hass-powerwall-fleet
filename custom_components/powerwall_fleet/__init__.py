@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
+import aiohttp
 from aiopowerwall import (
     PowerwallAuthenticationError,
     PowerwallClient,
@@ -14,11 +15,16 @@ from aiopowerwall import (
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
+    CONF_ENABLE_BACKUP_EVENTS,
+    CONF_ENABLE_COMPONENTS,
+    CONF_ENABLE_METERS,
     CONF_GATEWAY_HOST,
     CONF_GATEWAY_PASSWORD,
+    CONNECTION_LIMIT_PER_HOST,
+    DEFAULT_ENABLE_OPTIONAL_COORDINATORS,
+    KEEPALIVE_TIMEOUT_SECONDS,
     KEY_FILENAME,
     LOGGER,
     MASTER_BATTERY_DIN_SUFFIX,
@@ -31,6 +37,7 @@ from .coordinator import (
     GridStatusCoordinator,
     MasterBlock,
     MetersCoordinator,
+    PollScheduler,
     PowerwallRuntimeData,
     PowerwallFleetConfigEntry,
     StatusCoordinator,
@@ -57,11 +64,30 @@ async def async_setup_entry(
             f"RSA key file {key_path} is unavailable: {err}"
         ) from err
 
+    session = _async_create_session()
+    # Home Assistant does not run the on-unload callbacks when setup raises,
+    # so the failure paths below close the session themselves — otherwise
+    # every retry against an unreachable gateway would leak one.
+    entry.async_on_unload(session.close)
+    try:
+        return await _async_setup_entry(hass, entry, session, key_pem)
+    except Exception:
+        await session.close()
+        raise
+
+
+async def _async_setup_entry(
+    hass: HomeAssistant,
+    entry: PowerwallFleetConfigEntry,
+    session: aiohttp.ClientSession,
+    key_pem: bytes,
+) -> bool:
+    """Set up the gateway client, coordinators and poll tick."""
     client = PowerwallClient(
         host=entry.data[CONF_GATEWAY_HOST],
         gateway_password=entry.data[CONF_GATEWAY_PASSWORD],
         rsa_private_key_pem=key_pem,
-        session=async_get_clientsession(hass),
+        session=session,
     )
 
     try:
@@ -73,41 +99,100 @@ async def async_setup_entry(
         raise ConfigEntryNotReady(f"Gateway unreachable: {err}") from err
 
     status = StatusCoordinator(hass, entry, client)
-    meters = MetersCoordinator(hass, entry, client)
     battery_soe = BatterySoeCoordinator(hass, entry, client)
     grid_status = GridStatusCoordinator(hass, entry, client)
     config = ConfigCoordinator(hass, entry, client)
-    backup_events = BackupEventsCoordinator(hass, entry, client)
-    components = ComponentsCoordinator(hass, entry, client)
-
-    await asyncio.gather(
-        status.async_config_entry_first_refresh(),
-        meters.async_config_entry_first_refresh(),
-        battery_soe.async_config_entry_first_refresh(),
-        grid_status.async_config_entry_first_refresh(),
-        config.async_config_entry_first_refresh(),
-        backup_events.async_config_entry_first_refresh(),
-        components.async_config_entry_first_refresh(),
+    meters = (
+        MetersCoordinator(hass, entry, client)
+        if _optional_enabled(entry, CONF_ENABLE_METERS)
+        else None
+    )
+    backup_events = (
+        BackupEventsCoordinator(hass, entry, client)
+        if _optional_enabled(entry, CONF_ENABLE_BACKUP_EVENTS)
+        else None
+    )
+    components = (
+        ComponentsCoordinator(hass, entry, client)
+        if _optional_enabled(entry, CONF_ENABLE_COMPONENTS)
+        else None
+    )
+    coordinators = tuple(
+        coordinator
+        for coordinator in (
+            status,
+            battery_soe,
+            grid_status,
+            config,
+            meters,
+            backup_events,
+            components,
+        )
+        if coordinator is not None
     )
 
-    master_blocks = _master_blocks(config.data, status.data, components.data, din)
+    await asyncio.gather(
+        *(
+            coordinator.async_config_entry_first_refresh()
+            for coordinator in coordinators
+        )
+    )
+
+    master_blocks = _master_blocks(
+        config.data,
+        status.data,
+        components.data if components else {},
+        din,
+    )
 
     entry.runtime_data = PowerwallRuntimeData(
         client=client,
+        session=session,
         din=din,
         firmware_version=firmware_details["system"]["version"]["text"] or None,
         status=status,
-        meters=meters,
         battery_soe=battery_soe,
         grid_status=grid_status,
         config=config,
+        meters=meters,
         backup_events=backup_events,
         components=components,
         master_blocks=master_blocks,
     )
+    entry.async_on_unload(PollScheduler(hass, coordinators).async_start())
     entry.async_on_unload(entry.add_update_listener(_async_reload_on_update))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
+
+def _async_create_session() -> aiohttp.ClientSession:
+    """Return a session that holds its connection open between polls.
+
+    Home Assistant's shared session leaves aiohttp's default
+    ``keepalive_timeout`` (~15s) in place, which is shorter than every poll
+    gap here — so the pooled connection is always dead by the next poll and
+    each one pays a fresh TCP + TLS setup, which is the bulk of what this
+    integration costs the gateway. A dedicated connector holds the connection
+    open across a full cycle instead, and caps the pool at one connection per
+    host so a burst reuses that connection rather than opening more.
+
+    TLS verification is left to aiopowerwall, which passes ``ssl=False`` per
+    request: the gateway serves a self-signed certificate and is authenticated
+    by the signed TEDAPI payloads, not by the certificate.
+    """
+    return aiohttp.ClientSession(
+        connector=aiohttp.TCPConnector(
+            keepalive_timeout=KEEPALIVE_TIMEOUT_SECONDS,
+            limit_per_host=CONNECTION_LIMIT_PER_HOST,
+        )
+    )
+
+
+def _optional_enabled(entry: PowerwallFleetConfigEntry, option: str) -> bool:
+    """Return whether an optional endpoint group is switched on."""
+    return bool(
+        entry.options.get(option, DEFAULT_ENABLE_OPTIONAL_COORDINATORS)
+    )
 
 
 async def _async_reload_on_update(
@@ -272,7 +357,10 @@ def _ghost_filtered_bms_component_slots(
 
     full_delta = abs(aggregate_full_kwh - kept_full_kwh) / aggregate_full_kwh
     if kept_full_kwh > 0 and full_delta < 0.10:
-        LOGGER.warning(
+        # Expected and not actionable: Tesla routinely leaves registered-but-
+        # not-installed expansion rows in the components payload, and dropping
+        # them is the correct outcome, not a problem to report.
+        LOGGER.debug(
             "Dropping %d ghost Powerwall expansion slot(s): aggregate %.2f kWh "
             "matches real BMS slot sum %.2f kWh",
             len(ghost_slots),

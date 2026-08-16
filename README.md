@@ -65,13 +65,37 @@ After that, every poll is a signed call to the gateway over your LAN — no clou
 
 ## How it works at runtime
 
-Each gateway endpoint is polled on its own cadence by a dedicated coordinator,
-all sharing a single authenticated local `PowerwallClient` (no cloud calls):
+Each gateway endpoint has its own coordinator and its own cadence, all sharing a
+single authenticated local `PowerwallClient` (no cloud calls):
 
-- **status** — `/api/system_status`
-- **meters** — `/api/meters/aggregates`
-- **battery SoE**, **grid status**, **config**, **backup events**
-- **components** — TEDAPI component signals (BMS, PCH, **PV strings**, aggregator)
+| Coordinator | Endpoint | Interval | Default |
+|---|---|---|---|
+| **battery SoE** | `/api/system_status/soe` | 30s | on |
+| **status** | `/api/system_status` | 60s | on |
+| **grid status** | `/api/system_status/grid_status` | 300s | on |
+| **config** | gateway `config.json` | 1800s | on |
+| **meters** | `/api/meters/aggregates` | 300s | **off** |
+| **components** | TEDAPI signals (BMS, PCH, **PV strings**, aggregator) | 300s | **off** |
+| **backup events** | manual backup events | 300s | **off** |
+
+The gateway is usually a Wi-Fi client in power-save mode, where what costs it is
+waking the radio, not moving bytes — and on a typical install, connection setup
+was about 95% of the traffic. So:
+
+- **Connections are held open between polls.** Home Assistant's shared session
+  leaves aiohttp's ~15s keep-alive in place, which is shorter than every poll gap
+  here, so each poll used to pay a fresh TCP + TLS handshake. The integration uses
+  its own connector with a 300s keep-alive, capped at one connection per host.
+- **Polls are aligned.** Every interval is a whole multiple of the shortest one,
+  and a single tick drives them all, so the coordinators fall due together in one
+  burst instead of waking the radio at unrelated moments.
+- **Unused endpoint groups are off.** The three optional ones above back entities
+  most installs never read, and they were the bulk of the request load. Switch any
+  of them on from the integration's *Configure* options; entities come back with
+  their original ids, so history is preserved either way.
+
+Together these take a default install from ~600 requests/hour on ~600 connections
+to ~194 requests/hour on a handful of persistent ones (~97/hour on **Relaxed**).
 
 ## Maintenance & options
 
@@ -82,7 +106,8 @@ all sharing a single authenticated local `PowerwallClient` (no cloud calls):
   after a DHCP change) via the integration's *Reconfigure* option; no need to delete it.
 - **Polling profile** (integration *Configure* / options) — **Fast** halves every poll
   interval (fresher data, more LAN traffic), **Relaxed** doubles them; **Normal** is the
-  default.
+  default. The same options page switches the three optional endpoint groups
+  (meter aggregates, Powerwall 3 unit telemetry, manual backup events) back on.
 - **State precision** — the gateway reports raw floats (a state of charge comes back as
   `97.027972027972`), which would make almost every sensor "change" on every poll and
   flood websocket clients with `state_changed` events — enough to knock a dashboard
@@ -109,9 +134,13 @@ clashes.
 
 The integration creates one device per energy site, plus per-Powerwall and
 per-expansion battery devices. This fork enables almost all sensors by default
-(upstream disabled many useful ones, including the PV strings). The only group left
-off by default is the redundant per-CT **SYNC-meter** diagnostics (24 entities) — turn
+(upstream disabled many useful ones, including the PV strings). The redundant per-CT
+**SYNC-meter** diagnostics (24 entities) are left off in the entity registry — turn
 those on from the device page if you want them; disable anything you don't.
+
+The **PV strings**, per-location **meter aggregates** and **manual backup** entities
+belong to the optional endpoint groups above, so they only appear once you switch
+their group on in the integration's options.
 
 ### PV strings (the headline feature)
 Per string A–F: **voltage**, **current**, **power** (derived V × I), **state**, plus a

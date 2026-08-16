@@ -41,7 +41,9 @@ from .const import (
     CONF_GATEWAY_PASSWORD,
     CONF_PARENT_ENTRY_ID,
     CONF_SCAN_PROFILE,
+    DEFAULT_ENABLE_OPTIONAL_COORDINATORS,
     DEFAULT_SCAN_PROFILE,
+    OPTIONAL_COORDINATOR_OPTIONS,
     DOMAIN,
     KEY_FILENAME,
     KEY_PAIRING_POLL_ATTEMPTS,
@@ -496,23 +498,29 @@ class PowerwallFleetConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class PowerwallFleetOptionsFlow(OptionsFlow):
-    """Options: a polling profile that scales every coordinator interval."""
+    """Options: a polling profile, plus the optional endpoint groups."""
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         if user_input is not None:
             return self.async_create_entry(data=user_input)
-        current = self.config_entry.options.get(
-            CONF_SCAN_PROFILE, DEFAULT_SCAN_PROFILE
+        options = self.config_entry.options
+        schema: dict[Any, Any] = {
+            vol.Required(
+                CONF_SCAN_PROFILE,
+                default=options.get(CONF_SCAN_PROFILE, DEFAULT_SCAN_PROFILE),
+            ): vol.In(list(SCAN_PROFILE_MULTIPLIERS))
+        }
+        schema.update(
+            {
+                vol.Required(
+                    option,
+                    default=options.get(
+                        option, DEFAULT_ENABLE_OPTIONAL_COORDINATORS
+                    ),
+                ): bool
+                for option in OPTIONAL_COORDINATOR_OPTIONS
+            }
         )
-        return self.async_show_form(
-            step_id="init",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_SCAN_PROFILE, default=current): vol.In(
-                        list(SCAN_PROFILE_MULTIPLIERS)
-                    )
-                }
-            ),
-        )
+        return self.async_show_form(step_id="init", data_schema=vol.Schema(schema))

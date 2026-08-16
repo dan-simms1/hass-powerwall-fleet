@@ -21,15 +21,16 @@ async def async_setup_entry(
 ) -> None:
     """Set up Tesla Powerwall Local (Fleet) switch entities."""
     runtime = entry.runtime_data
-    async_add_entities(
-        [
-            AllowGridChargingSwitch(runtime),
-            StormModeSwitch(runtime),
-            GridServicesSwitch(runtime),
-            ManualBackupSwitch(runtime),
-            GridConnectedSwitch(runtime),
-        ]
-    )
+    entities: list[SwitchEntity] = [
+        AllowGridChargingSwitch(runtime),
+        StormModeSwitch(runtime),
+        GridServicesSwitch(runtime),
+        GridConnectedSwitch(runtime),
+    ]
+    # Manual backup reads the backup-events endpoint, which is optional.
+    if runtime.backup_events is not None:
+        entities.append(ManualBackupSwitch(runtime))
+    async_add_entities(entities)
 
 
 class AllowGridChargingSwitch(PowerwallFleetEntity, SwitchEntity):

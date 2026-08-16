@@ -42,18 +42,20 @@ async def async_get_config_entry_diagnostics(
     runtime = entry.runtime_data
 
     def _health(coordinator: Any) -> dict[str, Any]:
+        # Optional endpoint groups are None when switched off in the options.
+        if coordinator is None:
+            return {"enabled": False}
         return {
+            "enabled": True,
             "last_update_success": coordinator.last_update_success,
             "last_exception": (
                 repr(coordinator.last_exception)
                 if coordinator.last_exception
                 else None
             ),
-            "interval_seconds": (
-                coordinator.update_interval.total_seconds()
-                if coordinator.update_interval
-                else None
-            ),
+            # Refreshes are driven by the shared poll tick, so the coordinator's
+            # own update_interval is unset; this is the cadence it asks for.
+            "interval_seconds": coordinator.poll_interval,
         }
 
     coordinators = {
@@ -88,6 +90,8 @@ async def async_get_config_entry_diagnostics(
             for block in runtime.master_blocks
         ],
         "coordinator_health": {name: _health(c) for name, c in coordinators.items()},
-        "coordinators": {name: c.data for name, c in coordinators.items()},
+        "coordinators": {
+            name: c.data for name, c in coordinators.items() if c is not None
+        },
     }
     return async_redact_data(data, TO_REDACT)
