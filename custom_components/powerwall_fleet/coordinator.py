@@ -383,9 +383,7 @@ class PollScheduler:
         if not due:
             return
 
-        self._burst = self._hass.async_create_task(
-            asyncio.gather(*(c.async_refresh() for c in due))
-        )
+        self._burst = self._hass.async_create_task(self._async_burst(due))
         try:
             await self._burst
         except asyncio.CancelledError:
@@ -401,6 +399,18 @@ class PollScheduler:
         ):
             LOGGER.debug("Stopping poll tick: gateway authentication failed")
             self.async_stop()
+
+    async def _async_burst(
+        self, due: list[_BasePowerwallCoordinator[Any]]
+    ) -> None:
+        """Refresh every due coordinator as one cancellable unit.
+
+        This has to be a coroutine: ``async_create_task`` rejects the future
+        ``asyncio.gather`` returns, and gather schedules its refreshes itself,
+        so passing it directly would run the polls but lose the handle that the
+        in-flight guard, the auth check and cancel-on-unload all depend on.
+        """
+        await asyncio.gather(*(c.async_refresh() for c in due))
 
     @staticmethod
     def _should_poll(coordinator: _BasePowerwallCoordinator[Any]) -> bool:
