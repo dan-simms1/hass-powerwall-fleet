@@ -28,6 +28,7 @@ from .const import (
     KEY_FILENAME,
     LOGGER,
     MASTER_BATTERY_DIN_SUFFIX,
+    OPTIONAL_COORDINATOR_OPTIONS,
 )
 from .coordinator import (
     BackupEventsCoordinator,
@@ -159,7 +160,7 @@ async def _async_setup_entry(
         components=components,
         master_blocks=master_blocks,
     )
-    entry.async_on_unload(PollScheduler(hass, coordinators).async_start())
+    entry.async_on_unload(PollScheduler(hass, entry, coordinators).async_start())
     entry.async_on_unload(entry.add_update_listener(_async_reload_on_update))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
@@ -193,6 +194,31 @@ def _optional_enabled(entry: PowerwallFleetConfigEntry, option: str) -> bool:
     return bool(
         entry.options.get(option, DEFAULT_ENABLE_OPTIONAL_COORDINATORS)
     )
+
+
+async def async_migrate_entry(
+    hass: HomeAssistant, entry: PowerwallFleetConfigEntry
+) -> bool:
+    """Keep existing installs polling what they already polled.
+
+    The optional endpoint groups default off, which is right for a new install
+    but would silently delete entities — the PV strings among them — from one
+    that already had them, orphaning their long-term statistics. So any entry
+    that predates the options keeps all three groups on, and only new entries
+    get the lean default. An explicit ``False`` is left alone: that is a choice
+    the user made, not an absent option.
+
+    Entries created by v0.8.0 are also version 1 and are indistinguishable from
+    older ones, so they are grandfathered too. Turning a group back off is one
+    click; noticing that half your history quietly stopped is not.
+    """
+    if entry.version == 1:
+        options = dict(entry.options)
+        for option in OPTIONAL_COORDINATOR_OPTIONS:
+            options.setdefault(option, True)
+        hass.config_entries.async_update_entry(entry, options=options, version=2)
+        LOGGER.debug("Migrated entry to version 2, keeping optional endpoints on")
+    return True
 
 
 async def _async_reload_on_update(

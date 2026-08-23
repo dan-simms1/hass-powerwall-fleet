@@ -74,9 +74,11 @@ single authenticated local `PowerwallClient` (no cloud calls):
 | **status** | `/api/system_status` | 60s | on |
 | **grid status** | `/api/system_status/grid_status` | 300s | on |
 | **config** | gateway `config.json` | 1800s | on |
-| **meters** | `/api/meters/aggregates` | 300s | **off** |
-| **components** | TEDAPI signals (BMS, PCH, **PV strings**, aggregator) | 300s | **off** |
-| **backup events** | manual backup events | 300s | **off** |
+| **meters** | `/api/meters/aggregates` | 300s | **off*** |
+| **components** | TEDAPI signals (BMS, PCH, **PV strings**, aggregator) | 300s | **off*** |
+| **backup events** | manual backup events | 300s | **off*** |
+
+\* off for new installs; existing installs keep them on across the upgrade.
 
 The gateway is usually a Wi-Fi client in power-save mode, where what costs it is
 waking the radio, not moving bytes — and on a typical install, connection setup
@@ -89,13 +91,20 @@ was about 95% of the traffic. So:
 - **Polls are aligned.** Every interval is a whole multiple of the shortest one,
   and a single tick drives them all, so the coordinators fall due together in one
   burst instead of waking the radio at unrelated moments.
-- **Unused endpoint groups are off.** The three optional ones above back entities
-  most installs never read, and they were the bulk of the request load. Switch any
-  of them on from the integration's *Configure* options; entities come back with
+- **Unused endpoint groups are off for new installs.** The three optional ones above
+  back entities most installs never read, and they were the bulk of the request load.
+  Upgrading never takes them away: an existing config entry keeps all three on, so
+  nothing you already had disappears — switch them off yourself to claim the saving.
+  Toggle any of them from the integration's *Configure* options; entities return with
   their original ids, so history is preserved either way.
+- **Nothing is polled that nothing reads.** An endpoint whose entities are all
+  disabled in the entity registry isn't polled at all, and Home Assistant's
+  *Enable polling for updates* switch turns the lot off.
 
-Together these take a default install from ~600 requests/hour on ~600 connections
-to ~194 requests/hour on a handful of persistent ones (~97/hour on **Relaxed**).
+Together these take a default install from ~1,206 requests/hour, each on its own
+fresh connection, to ~194 requests/hour over a handful of persistent ones — or
+~603/hour down to ~97/hour on the **Relaxed** profile. Measured on a real gateway:
+no new connections at all across a 180s capture, and 5.9 MB/hour down to 0.46.
 
 ## Maintenance & options
 

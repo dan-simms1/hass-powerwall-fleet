@@ -43,12 +43,12 @@ from .const import (
     CONF_SCAN_PROFILE,
     DEFAULT_ENABLE_OPTIONAL_COORDINATORS,
     DEFAULT_SCAN_PROFILE,
-    OPTIONAL_COORDINATOR_OPTIONS,
     DOMAIN,
     KEY_FILENAME,
     KEY_PAIRING_POLL_ATTEMPTS,
     KEY_PAIRING_POLL_INTERVAL,
     LOGGER,
+    OPTIONAL_COORDINATOR_OPTIONS,
     SCAN_PROFILE_MULTIPLIERS,
 )
 
@@ -133,7 +133,7 @@ def _is_verified(client: Mapping[str, Any] | None) -> bool:
 class PowerwallFleetConfigFlow(ConfigFlow, domain=DOMAIN):
     """Config flow for Tesla Powerwall Local (Fleet), backed by a Tesla Fleet entry."""
 
-    VERSION = 1
+    VERSION = 2
 
     def __init__(self) -> None:
         self._parent_entry: TeslaFleetConfigEntry | None = None

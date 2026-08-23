@@ -292,14 +292,23 @@ class PollScheduler:
     Coordinators refresh concurrently within a burst; the client's connector
     is limited to a single connection per host, so the requests queue on one
     kept-alive connection rather than opening one each.
+
+    Driving refreshes from here means opting out of ``DataUpdateCoordinator``'s
+    own scheduling, so the three behaviours it would otherwise give us are
+    reimplemented on the scheduled path: a coordinator nothing is listening to
+    is not polled, ``pref_disable_polling`` is honoured, and polling stops once
+    the gateway rejects our credentials. The refresh at setup and the explicit
+    refresh after a write both bypass all of that, as they should.
     """
 
     def __init__(
         self,
         hass: HomeAssistant,
+        entry: PowerwallFleetConfigEntry,
         coordinators: tuple[_BasePowerwallCoordinator[Any], ...],
     ) -> None:
         self._hass = hass
+        self._entry = entry
         self._tick_seconds = min(c.poll_interval for c in coordinators)
         self._members = tuple(
             (coordinator, max(1, round(coordinator.poll_interval / self._tick_seconds)))
@@ -307,6 +316,9 @@ class PollScheduler:
         )
         # Setup has just refreshed everything, so that counts as tick 0.
         self._tick = 0
+        self._burst: asyncio.Task[Any] | None = None
+        self._unsub: CALLBACK_TYPE | None = None
+        self._stopped = False
 
     @property
     def tick_seconds(self) -> int:
@@ -324,19 +336,79 @@ class PollScheduler:
                 for coordinator, every in self._members
             ),
         )
-        return async_track_time_interval(
+        self._unsub = async_track_time_interval(
             self._hass,
             self._async_tick,
             timedelta(seconds=self._tick_seconds),
             name=f"{DOMAIN}_poll",
         )
+        return self.async_stop
+
+    @callback
+    def async_stop(self) -> None:
+        """Stop ticking and abandon any burst still in flight."""
+        self._stopped = True
+        if self._unsub is not None:
+            self._unsub()
+            self._unsub = None
+        if self._burst is not None and not self._burst.done():
+            self._burst.cancel()
+        self._burst = None
 
     async def _async_tick(self, _now: Any) -> None:
+        # Cancelling the timer should mean no further ticks, but one already
+        # dispatched would otherwise still poll a gateway we have given up on.
+        if self._stopped:
+            return
+
         self._tick += 1
+
+        # A burst is serialised over one connection, so an unhealthy gateway
+        # can make it outlast the tick. Skip this one rather than starting a
+        # second: queued refreshes would pile up exactly when the gateway is
+        # least able to answer them.
+        if self._burst is not None and not self._burst.done():
+            LOGGER.debug("Skipping poll tick %d: previous burst still running", self._tick)
+            return
+
+        entry = self._entry
+        if entry.pref_disable_polling:
+            return
+
         due = [
             coordinator
             for coordinator, every in self._members
-            if self._tick % every == 0
+            if self._tick % every == 0 and self._should_poll(coordinator)
         ]
-        if due:
-            await asyncio.gather(*(c.async_refresh() for c in due))
+        if not due:
+            return
+
+        self._burst = self._hass.async_create_task(
+            asyncio.gather(*(c.async_refresh() for c in due))
+        )
+        try:
+            await self._burst
+        except asyncio.CancelledError:
+            return
+        finally:
+            self._burst = None
+
+        # The gateway has rejected our credentials; every coordinator shares
+        # them, so there is nothing to poll until reauth reloads the entry.
+        if any(
+            isinstance(coordinator.last_exception, ConfigEntryAuthFailed)
+            for coordinator, _ in self._members
+        ):
+            LOGGER.debug("Stopping poll tick: gateway authentication failed")
+            self.async_stop()
+
+    @staticmethod
+    def _should_poll(coordinator: _BasePowerwallCoordinator[Any]) -> bool:
+        """Whether anything is actually listening to this coordinator.
+
+        ``DataUpdateCoordinator`` normally refuses to schedule a refresh with no
+        listeners, which is what makes disabling an entity stop its polling. It
+        keeps that bookkeeping in a private attribute and exposes no accessor,
+        so read it directly and poll if the attribute ever goes away.
+        """
+        return bool(getattr(coordinator, "_listeners", True))
