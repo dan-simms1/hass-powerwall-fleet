@@ -375,10 +375,16 @@ class PollScheduler:
         if entry.pref_disable_polling:
             return
 
+        # A coordinator whose last refresh failed is retried on every tick
+        # until it succeeds, then drops back to its own cadence. Without this
+        # one failed poll of a slow coordinator during a Wi-Fi blip left its
+        # entities unavailable for a whole interval -- 30 minutes for the
+        # config coordinator, which owns the backup-reserve number.
         due = [
             coordinator
             for coordinator, every in self._members
-            if self._tick % every == 0 and self._should_poll(coordinator)
+            if (self._tick % every == 0 or not coordinator.last_update_success)
+            and self._should_poll(coordinator)
         ]
         if not due:
             return
