@@ -49,7 +49,7 @@ class Entry: pref_disable_polling = False
 async def main():
     global sched
     soe = FakeCoord("soe", 30)
-    cfg = FakeCoord("config", 1800, fail_ticks={60})   # tick 60 = 30 min: the blip
+    cfg = FakeCoord("config", 1800, fail_ticks={60})   # explicit 1800 s here; tick 60 = 30 min: the blip
     sched = C.PollScheduler(FakeHass(), Entry(), (soe, cfg))
     for _ in range(125):
         await sched._async_tick(None)
@@ -58,3 +58,7 @@ calls = asyncio.run(main())
 print("config polled at ticks:", calls)
 assert calls[:3] == [60, 61, 120], calls      # failed at 60 -> retried at 61 (30 s later), then normal cadence
 print("OK: failed config poll retried on the next tick, then back to every 60 ticks")
+
+
+assert sys.modules["pwf.const"].SCAN_CONFIG_SECONDS == 300
+print("OK: config polled every 300 s")

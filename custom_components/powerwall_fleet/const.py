@@ -25,7 +25,10 @@ KEY_PAIRING_POLL_ATTEMPTS = 5
 SCAN_BATTERY_SOE_SECONDS = 30  # state of charge: drives charging automations
 SCAN_STATUS_SECONDS = 60
 SCAN_GRID_STATUS_SECONDS = 300  # grid up/down is a rare event
-SCAN_CONFIG_SECONDS = 1800  # only changes when someone edits gateway settings
+# 300 (was 1800): the backup reserve lives here, and it is also changed
+# from outside this integration (Tesla app, cloud API fallbacks). A 30-minute
+# view of it was too stale for automations that act on it.
+SCAN_CONFIG_SECONDS = 300
 SCAN_METERS_SECONDS = 300
 SCAN_BACKUP_EVENTS_SECONDS = 300
 SCAN_COMPONENTS_SECONDS = 300

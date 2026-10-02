@@ -73,7 +73,7 @@ single authenticated local `PowerwallClient` (no cloud calls):
 | **battery SoE** | `/api/system_status/soe` | 30s | on |
 | **status** | `/api/system_status` | 60s | on |
 | **grid status** | `/api/system_status/grid_status` | 300s | on |
-| **config** | gateway `config.json` | 1800s | on |
+| **config** | gateway `config.json` | 300s | on |
 | **meters** | `/api/meters/aggregates` | 300s | **off*** |
 | **components** | TEDAPI signals (BMS, PCH, **PV strings**, aggregator) | 300s | **off*** |
 | **backup events** | manual backup events | 300s | **off*** |
